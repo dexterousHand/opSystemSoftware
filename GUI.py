@@ -1,6 +1,7 @@
 import sys
 import os
 from os import path as op
+from PIL import Image
 
 import cv2
 import numpy as np
@@ -8,6 +9,7 @@ import time
 from utils import ensure_dir
 import multiprocessing as mp
 from IPython import embed
+import temperature
 
 try: # PyQt4
     from PyQt4 import QtGui
@@ -25,7 +27,7 @@ except ImportError: # PyQt5
     QString = str
 
 PYTHON_VERSION = sys.version_info[0]
-OFFLINE_FLAG = False # Offline debug without ros
+OFFLINE_FLAG = True # Offline debug without ros
 
 if not OFFLINE_FLAG:
     try: # Rospy
@@ -279,6 +281,7 @@ class MainWidget(QWidget):
                 self.force_widget_2.setFixedSize(*windowsize)
                 self.force_widget_2.setAlignment(Qt.AlignCenter)
 
+
         """
         Prediction
         """
@@ -327,11 +330,43 @@ class MainWidget(QWidget):
         self.exit_button = QPushButton("Exit", self)
         self.exit_button.clicked.connect(self.close)
 
+        #added code---------------
+        self.temperature_button = QPushButton("temperature")
+        self.sort_button = QPushButton("sort")
+        self.temperature_label = QLabel("temperature")
+        self.sort_label = QLabel("sort")
+        self.temperature_button.clicked.connect(self.get_temperature)
+        self.sort_button.clicked.connect(self.get_sort)
+        #-------------------
+
         self.init_ui()
         self.adapter.start()
 
         # self.action_response = False
         self.multitimes = 0
+
+    def get_temperature(self):
+        print("temperature button is clicked")
+        img = self.image_widget_2.image.bits()
+        print(type(img))
+        t = temperature.Tempdiscern("/home/robot/Desktop/opSystemSoftware/55 (2).png")
+        result = t.discern()
+        if result == "purple":
+            self.temperature_label.setText("Cool (" +  result + ")")
+        elif result == "blue":
+            self.temperature_label.setText("Normal ("  + result + ")")
+        if result == "white":
+            self.temperature_label.setText("Hot (" + result + ")")
+        if result == "black":
+            self.temperature_label.setText("Cold (" + result + ")")
+
+
+
+    def get_sort(self):
+        print("sort button is clicked")
+        img = self.image_widget_1.image.bits()
+        print(img)
+        self.sort_label.setText("hhhh")
 
 
     def init_ui(self):
@@ -407,6 +442,14 @@ class MainWidget(QWidget):
         vbox4.addWidget(self.position_flag, 11, 2)
         vbox4.addWidget(self.current_flag, 12, 2)
 
+        vbox_new1 = QGridLayout()
+        vbox_new1.addWidget(self.temperature_button, 0,0)
+        vbox_new1.addWidget(self.temperature_label, 0,1)
+        vbox_new1.addWidget(self.sort_button, 1,0)
+        vbox_new1.addWidget(self.sort_label, 1,1)
+
+
+
 
 
         vbox5 = QVBoxLayout()
@@ -416,6 +459,8 @@ class MainWidget(QWidget):
         vbox5.addWidget(hlines[1])
         vbox5.addStretch(1)
         vbox5.addLayout(vbox3)
+        vbox5.addStretch(1)
+        vbox5.addLayout(vbox_new1)
         vbox5.addStretch(1)
         vbox5.addWidget(hlines[2])
         vbox5.addStretch(1)

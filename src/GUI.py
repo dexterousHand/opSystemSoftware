@@ -7,6 +7,7 @@ import numpy as np
 import time
 from utils import ensure_dir
 import multiprocessing as mp
+import temperature
 from IPython import embed
 
 try: # PyQt4
