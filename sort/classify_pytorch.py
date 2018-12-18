@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
+import torch.utils.data as Data
+global test_data, test_label, cnn
 # 数据处理完成，卷积训练
 
 
@@ -16,8 +17,8 @@ def load_test_data(filename):
     test_data, test_label = quickload(filename)
     test_data = test_data[:, np.newaxis]
 
-    test_data = torch.tensor(test_data).cuda()
-    test_label = torch.tensor(test_label).cuda()
+    test_data = torch.tensor(test_data)
+    test_label = torch.tensor(test_label)
     return test_data, test_label
 
 
@@ -58,13 +59,25 @@ class CNN(nn.Module):
         self.conv5 = nn.Sequential(  # input shape (128, 15, 20)
             nn.Conv2d(128, 256, 5, 1, 2),  # output shape (128, 15, 20)
             nn.BatchNorm2d(256),
+            nn.Dropout(0.8),
             nn.ReLU(inplace=True),  # activation
         )
-        self.out = nn.Sequential(
-            nn.Linear(256 * 15 * 20, 1024),
+        self.conv6 = nn.Sequential(  # input shape (128, 15, 20)
+            nn.Conv2d(256, 512, 5, 1, 2),  # output shape (128, 15, 20)
+            nn.BatchNorm2d(512),
             nn.Dropout(0.7),
-            nn.Linear(1024, 3)
-        )  # fully connected layer, output 3 classes
+            nn.ReLU(inplace=True),  # activation
+        )
+        # self.conv7 = nn.Sequential(  # input shape (128, 15, 20)
+        #     nn.Conv2d(512, 1024, 5, 1, 2),  # output shape (128, 15, 20)
+        #     nn.BatchNorm2d(1024),
+        #     nn.ReLU(inplace=True),  # activation
+        # )
+        self.out = nn.Sequential(
+            nn.Linear(512 * 15 * 20, 500),
+            nn.Dropout(0.7),
+            nn.Linear(500, 7),  # fully connected layer, output 7 classes
+        )
 
     def forward(self, x):
         x = self.conv1(x.float())
@@ -72,6 +85,8 @@ class CNN(nn.Module):
         x = self.conv3(x.float())
         x = self.conv4(x.float())
         x = self.conv5(x.float())
+        x = self.conv6(x.float())
+        # x = self.conv7(x.float())
         # for i in range(3):
         #     x=self.conv(x.float())
         x = x.view(x.size(0), -1)  # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
@@ -81,19 +96,31 @@ class CNN(nn.Module):
 
 def restore_params(model):
     print("restore parameters")
+    # model.conv1.load_state_dict(torch.load('./conv1.pkl'))
+    # model.conv2.load_state_dict(torch.load('./conv2.pkl'))
+    # model.conv3.load_state_dict(torch.load('./conv3.pkl'))
+    # model.conv4.load_state_dict(torch.load('./conv4.pkl'))
+    # model.conv5.load_state_dict(torch.load('./conv5.pkl'))
+    # model.conv6.load_state_dict(torch.load('./conv6.pkl'))
+    # model.out.load_state_dict(torch.load('./out.pkl'))
     model.conv1.load_state_dict(torch.load('./sort/conv1.pkl'))
     model.conv2.load_state_dict(torch.load('./sort/conv2.pkl'))
     model.conv3.load_state_dict(torch.load('./sort/conv3.pkl'))
     model.conv4.load_state_dict(torch.load('./sort/conv4.pkl'))
     model.conv5.load_state_dict(torch.load('./sort/conv5.pkl'))
+    model.conv6.load_state_dict(torch.load('./sort/conv6.pkl'))
     model.out.load_state_dict(torch.load('./sort/out.pkl'))
 
 
-def test(model, test_data, test_label):
-    test_output, _ = model(test_data)
-    test_output = test_output.cuda()
-    pred_y = torch.max(test_output, 1)[1].cpu().data.numpy()
-    accuracy = float((pred_y == test_label.cpu().data.numpy()).astype(int).sum()) / float(test_label.size(0))
+def test(model, test_loader):
+    acc = np.array(0)
+    for step, (b_x, b_y) in enumerate(test_loader):  # gives batch data, normalize x when iterate train_loader
+        b_x = b_x.cuda()
+        test_output, _ = model(b_x)
+        test_output = test_output.cuda()
+        pred_y = torch.max(test_output, 1)[1].cpu().data.numpy()
+        acc += np.sum((pred_y == b_y.data.numpy()).astype(int))
+    accuracy = float(acc) / float((step + 1) * test_loader.batch_size)
     return accuracy
 
 
@@ -138,24 +165,64 @@ def quickload(filename):
     return data, label
 
 
-print("model define")
-cnn = CNN()
-cnn.cuda()
 
-optimizer = torch.optim.Adam(cnn.parameters(), lr=LR)  # optimize all cnn parameters
-loss_func = nn.CrossEntropyLoss()  # the target label is not one-hotted
 
-# 恢复参数
-restore_params(cnn)
-test_data, test_label = load_test_data("./sort/test.npy")
-# accuracy = test(cnn, test_data, test_label)
-# print("test accuracy:",accuracy)
+def init_dataloader(data, label, batch_size):
+    torch_dataset = Data.TensorDataset(data, label)
+    # 把 dataset 放入 DataLoader
+    loader = Data.DataLoader(
+        dataset=torch_dataset,  # torch TensorDataset format
+        batch_size=batch_size,  # mini batch size
+        shuffle=False,  # 要不要打乱数据 (打乱比较好)
+        # shuffle=True,  # 要不要打乱数据 (打乱比较好)
+        num_workers=1,  # 多线程来读数据
+    )
+    return loader
 
-def guitest(index):
-    sample_data = test_data[index].cpu().numpy()[np.newaxis]
-    sample_label = test_label[index].cpu().numpy()[np.newaxis]
-    # sample_data = loadimg("./sort/0")
-    # sample_label = np.array(1)
-    sample_data = torch.tensor(sample_data).cuda()
-    pred=test_sample(cnn, sample_data, sample_label)
+
+
+
+def initNet():
+    global test_data, test_label, cnn
+    TEST_BATCH_SIZE = 1
+    print("model define")
+    cnn = CNN()
+    cnn.cuda()
+    # 恢复参数
+    restore_params(cnn)
+    cnn.eval()
+    ### test alg_______________________
+    # test_data, test_label = load_test_data("./test.npy")
+    # test_loader = init_dataloader(test_data, test_label, TEST_BATCH_SIZE)
+    # accuracy = test(cnn, test_loader)
+    # print("test accuracy:", accuracy)
+    ###_______________________________
+    test_data, test_label = load_test_data("./sort/test.npy")
+
+
+def guitest(filename):
+    global test_data, test_label, cnn
+    sample_data = test_data[0].cpu().numpy()[np.newaxis]
+    # sample_label = test_label[index].cpu().numpy()[np.newaxis]
+    # sample_data = torch.tensor(sample_data).cuda()
+    # pred = test_sample(cnn, sample_data, sample_label)
+    ###read img
+    # print("sample_data1:",sample_data)
+    sample_data = torch.tensor(loadimg(filename)).cuda()
+
+    # print("sample_data2:",sample_data)
+    sample_label = np.array(0)
+    pred = test_sample(cnn, sample_data, sample_label)
     return pred
+
+
+
+def main():
+    cnn=initNet()
+    for i in range(300, 310):
+        guitest(i,cnn)
+
+
+if __name__ == '__main__':
+    # main()
+    initNet()

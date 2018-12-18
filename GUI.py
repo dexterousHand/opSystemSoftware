@@ -8,6 +8,7 @@ import numpy as np
 import time
 from utils import ensure_dir
 import multiprocessing as mp
+from sort.classify_pytorch import initNet,guitest
 from IPython import embed
 import temperature
 
@@ -331,12 +332,14 @@ class MainWidget(QWidget):
         self.exit_button.clicked.connect(self.close)
 
         #added code---------------
+
         self.temperature_button = QPushButton("temperature")
         self.sort_button = QPushButton("sort")
         self.temperature_label = QLabel("temperature")
         self.sort_label = QLabel("sort")
         self.temperature_button.clicked.connect(self.get_temperature)
         self.sort_button.clicked.connect(self.get_sort)
+
         #-------------------
 
         self.init_ui()
@@ -349,7 +352,7 @@ class MainWidget(QWidget):
         print("temperature button is clicked")
         img = self.image_widget_2.image.bits()
         print(type(img))
-        t = temperature.Tempdiscern("/home/robot/Desktop/opSystemSoftware/55 (2).png")
+        t = temperature.Tempdiscern("./55 (2).png")
         result = t.discern()
         if result == "purple":
             self.temperature_label.setText("Cool (" +  result + ")")
@@ -364,9 +367,10 @@ class MainWidget(QWidget):
 
     def get_sort(self):
         print("sort button is clicked")
-        img = self.image_widget_1.image.bits()
-        print(img)
-        self.sort_label.setText("hhhh")
+        pred=guitest("41_18")
+        # img = self.image_widget_1.image.bits()
+        # print(img)
+        self.sort_label.setText(pred)
 
 
     def init_ui(self):
@@ -587,6 +591,7 @@ def gui(q1, q2):
     print("GUI process started. pid = {}".format(os.getpid()))
     app = QApplication(sys.argv)
     main_widget = MainWidget(q1, q2, usecam2=True, useforce=False)
+    initNet()
     main_widget.show()
     ret = app.exec_()
     q1.put(0)  # Release robot
