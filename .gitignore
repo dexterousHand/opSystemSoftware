@@ -1,5 +1,8 @@
 sort/*.npy
 sort/*.pkl
+sort/1/
+sort/2/
+sort/3/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -76,7 +76,7 @@ class CNN(nn.Module):
         self.out = nn.Sequential(
             nn.Linear(512 * 15 * 20, 500),
             nn.Dropout(0.7),
-            nn.Linear(500, 7),  # fully connected layer, output 7 classes
+            nn.Linear(500, 3),  # fully connected layer, output 7 classes
         )
 
     def forward(self, x):
@@ -103,13 +103,13 @@ def restore_params(model):
     # model.conv5.load_state_dict(torch.load('./conv5.pkl'))
     # model.conv6.load_state_dict(torch.load('./conv6.pkl'))
     # model.out.load_state_dict(torch.load('./out.pkl'))
-    model.conv1.load_state_dict(torch.load('./sort/conv1.pkl'))
-    model.conv2.load_state_dict(torch.load('./sort/conv2.pkl'))
-    model.conv3.load_state_dict(torch.load('./sort/conv3.pkl'))
-    model.conv4.load_state_dict(torch.load('./sort/conv4.pkl'))
-    model.conv5.load_state_dict(torch.load('./sort/conv5.pkl'))
-    model.conv6.load_state_dict(torch.load('./sort/conv6.pkl'))
-    model.out.load_state_dict(torch.load('./sort/out.pkl'))
+    model.conv1.load_state_dict(torch.load('../sort/conv1.pkl'))
+    model.conv2.load_state_dict(torch.load('../sort/conv2.pkl'))
+    model.conv3.load_state_dict(torch.load('../sort/conv3.pkl'))
+    model.conv4.load_state_dict(torch.load('../sort/conv4.pkl'))
+    model.conv5.load_state_dict(torch.load('../sort/conv5.pkl'))
+    model.conv6.load_state_dict(torch.load('../sort/conv6.pkl'))
+    model.out.load_state_dict(torch.load('../sort/out.pkl'))
 
 
 def test(model, test_loader):
@@ -140,7 +140,7 @@ def test_sample(model, data, label):
     test_output = test_output.cuda()
     pred_y = torch.max(test_output, 1)[1].cpu().data.numpy()[0]
     print("predict: ", pred_y)
-    print("real   : ", int(label))
+    # print("real   : ", int(label))
     return str(pred_y)
 
 
@@ -197,7 +197,7 @@ def initNet():
     # accuracy = test(cnn, test_loader)
     # print("test accuracy:", accuracy)
     ###_______________________________
-    test_data, test_label = load_test_data("./sort/test.npy")
+    test_data, test_label = load_test_data("../sort/test.npy")
 
 
 def guitest(filename):
