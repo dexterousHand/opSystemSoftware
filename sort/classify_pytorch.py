@@ -68,15 +68,15 @@ class CNN(nn.Module):
             nn.Dropout(0.7),
             nn.ReLU(inplace=True),  # activation
         )
-        # self.conv7 = nn.Sequential(  # input shape (128, 15, 20)
-        #     nn.Conv2d(512, 1024, 5, 1, 2),  # output shape (128, 15, 20)
-        #     nn.BatchNorm2d(1024),
-        #     nn.ReLU(inplace=True),  # activation
-        # )
+        self.conv7 = nn.Sequential(  # input shape (128, 15, 20)
+            nn.Conv2d(512, 1024, 5, 1, 2),  # output shape (128, 15, 20)
+            nn.BatchNorm2d(1024),
+            nn.ReLU(inplace=True),  # activation
+        )
         self.out = nn.Sequential(
-            nn.Linear(512 * 15 * 20, 500),
+            nn.Linear(1024 * 15 * 20, 1024),
             nn.Dropout(0.7),
-            nn.Linear(500, 3),  # fully connected layer, output 7 classes
+            nn.Linear(1024, 3),  # fully connected layer, output 7 classes
         )
 
     def forward(self, x):
@@ -86,7 +86,7 @@ class CNN(nn.Module):
         x = self.conv4(x.float())
         x = self.conv5(x.float())
         x = self.conv6(x.float())
-        # x = self.conv7(x.float())
+        x = self.conv7(x.float())
         # for i in range(3):
         #     x=self.conv(x.float())
         x = x.view(x.size(0), -1)  # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
@@ -109,6 +109,7 @@ def restore_params(model):
     model.conv4.load_state_dict(torch.load('../sort/conv4.pkl'))
     model.conv5.load_state_dict(torch.load('../sort/conv5.pkl'))
     model.conv6.load_state_dict(torch.load('../sort/conv6.pkl'))
+    model.conv7.load_state_dict(torch.load('../sort/conv7.pkl'))
     model.out.load_state_dict(torch.load('../sort/out.pkl'))
 
 
