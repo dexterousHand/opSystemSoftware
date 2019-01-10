@@ -1,4 +1,5 @@
 sort/*.npy
+img/
 sort/*.pkl
 sort/1/
 sort/2/
